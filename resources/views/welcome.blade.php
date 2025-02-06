@@ -1,5 +1,16 @@
 @extends('layouts.master')
 @section('content')
+
+
+
+<div id="loading-spinner" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255, 255, 255, 0.8); z-index: 9999; text-align: center;">
+    <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);">
+        <div class="spinner-border text-primary" role="status">
+        </div>
+        <p>Chargement...</p>
+    </div>
+</div>
+
 <div class="container mt-5">
     <div class="row">
         <div class="col-md-8">
@@ -123,39 +134,46 @@
     // }
 
     function downloadImage() {
-html2canvas(document.getElementById("capture-area")).then(canvas => {
-    let base64Image = canvas.toDataURL("image/png");
+    // Show the loading spinner
+    document.getElementById('loading-spinner').style.display = 'block';
 
-    fetch('{{ route('save.image') }}', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
-        },
-        body: JSON.stringify({
-            image: base64Image,
-        }),
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.success) {
+    html2canvas(document.getElementById("capture-area")).then(canvas => {
+        let base64Image = canvas.toDataURL("image/png");
 
-            alert('Image enregistrée avec succès !');
+        fetch('{{ route('save.image') }}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
+            },
+            body: JSON.stringify({
+                image: base64Image,
+            }),
+        })
+        .then(response => response.json())
+        .then(data => {
+            // Hide the loading spinner after the request is done
+            document.getElementById('loading-spinner').style.display = 'none';
 
-            const link = document.createElement('a');
-                link.href = data.path;  // Chemin de l'image retourné par le serveur
-                link.download = 'image.png'; // Nom du fichier téléchargé
-                link.click();  // Simule le clic pour télécharger l'image
-                
-        } else {
-            alert('Une erreur est survenue lors de l\'enregistrement de l\'image.');
-        }
-    })
-    .catch(error => {
-        alert('Erreur : ' + error);
+            if (data.success) {
+                alert('Image enregistrée avec succès !');
+
+                const link = document.createElement('a');
+                link.href = data.path;  // Path returned by server
+                link.download = 'image.png'; // File name for download
+                link.click();  // Trigger the download
+            } else {
+                alert('Une erreur est survenue lors de l\'enregistrement de l\'image.');
+            }
+        })
+        .catch(error => {
+            // Hide the loading spinner on error as well
+            document.getElementById('loading-spinner').style.display = 'none';
+            alert('Erreur : ' + error);
+        });
     });
-});
 }
+
 
 
 
