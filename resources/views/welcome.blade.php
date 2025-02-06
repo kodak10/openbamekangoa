@@ -68,7 +68,7 @@
     .image-container {
         position: relative;
         width: 100%;
-        height: 50vh;
+        height: 400px;
         border: 1px solid #ccc;
         overflow: hidden;
         display: flex;
