@@ -12,40 +12,55 @@ class ImageController extends Controller
         return view('welcome');
     }
 
+    public function showGallery()
+    {
+        // Récupérer toutes les images stockées dans la base de données
+        $images = ImageModel::all();
+        return view('galerie', compact('images'));
+    }
+
+
 
     public function saveImage(Request $request)
     {
         try {
-            // Récupérer l'image en base64 depuis la requête
+            // Vérifier si l'image en base64 est fournie
             $imageData = $request->input('image');
             if (!$imageData) {
                 return response()->json(['error' => 'Aucune image fournie'], 400);
             }
-
-            // Extraire la partie base64 de l'image
-            $imageData = str_replace('data:image/png;base64,', '', $imageData);
+    
+            // Supprimer le préfixe "data:image/png;base64," et décoder l'image
+            $imageData = preg_replace('/^data:image\/\w+;base64,/', '', $imageData);
             $imageData = base64_decode($imageData);
-
+    
+            if (!$imageData) {
+                return response()->json(['error' => 'Format d\'image invalide'], 400);
+            }
+    
             // Générer un nom unique pour l'image
             $imageName = 'image_' . time() . '.png';
+    
+            // Définir le chemin de stockage
+            $imagePath = 'images/' . $imageName;
+    
+            // Stocker l'image dans 'storage/app/public/images'
+            Storage::disk('public')->put($imagePath, $imageData);
+    
+            // Sauvegarder le chemin dans la base de données
+            $imageModel = new ImageModel();
+            $imageModel->path = 'storage/' . $imagePath; // Chemin accessible publiquement
+            $imageModel->save();
 
-            // Sauvegarder l'image dans le répertoire public
-            $path = 'public/images/' . $imageName;
-            Storage::put($path, $imageData);
-
-
-            // Sauvegarder le chemin de l'image dans la base de données
-            $image = new ImageModel();
-            $image->path = Storage::url($path);
-            $image->save();
-
-            // Retourner le chemin de l'image
-            //return view('welcome');
-            return response()->json(['success' => true, 'path' => Storage::url($path)]);
+            // Télécharger automatiquement l'image après l'enregistrement
+    
+            // Retourner la réponse avec l'URL publique de l'image
+            return response()->json(['success' => true, 'path' => asset('storage/' . $imagePath)]);
         } catch (\Exception $e) {
             return response()->json(['error' => 'Erreur lors de l\'enregistrement de l\'image: ' . $e->getMessage()], 500);
         }
     }
+    
 
 
     
