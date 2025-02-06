@@ -166,10 +166,10 @@
                 const notification = document.getElementById('notification');
                 notification.style.display = 'block';
 
-                // Masquer la notification après 10 secondes
+                // Masquer la notification après 5 secondes
                 setTimeout(() => {
                     notification.style.display = 'none';
-                }, 10000);
+                }, 5000);
 
                 // Télécharger l'image
                 const link = document.createElement('a');

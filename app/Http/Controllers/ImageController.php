@@ -14,8 +14,8 @@ class ImageController extends Controller
 
     public function showGallery()
     {
-        // Récupérer toutes les images stockées dans la base de données
-        $images = ImageModel::all();
+        $images = ImageModel::paginate(12); // Afficher 8 images par page
+
         return view('galerie', compact('images'));
     }
 
