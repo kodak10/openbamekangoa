@@ -1,11 +1,13 @@
 <?php
 namespace App\Http\Controllers;
 
+use App\Models\ImageModel;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
+use Intervention\Image\ImageManagerStatic;
 use Intervention\Image\ImageManager;
-use Intervention\Image\Drivers\Gd\Driver;
-use Illuminate\Support\Facades\File;
+use Intervention\Image\Drivers\Imagick\Driver;
+use Illuminate\Support\Facades\Log; // Import pour logger l'erreur
 
 class ImageController extends Controller
 {
@@ -13,76 +15,86 @@ class ImageController extends Controller
     {
         return view('welcome');
     }
+
+    public function showGallery()
+    {
+        // Récupérer toutes les images stockées dans la base de données
+        $images = ImageModel::all();
+        return view('galerie', compact('images'));
+    }
+
+
+
+
+
+  
     
-    public function generateImage(Request $request)
-{
-    $backgroundPath = public_path('background.jpg');
-    $headerPath = public_path('header.jpg');  // Image d'en-tête
-    $footerPath = public_path('footer.png');  // Image de pied de page
-
-    // Vérifier si l'image de fond existe
-    if (!File::exists($backgroundPath)) {
-        return response()->json(['error' => 'Image de fond non trouvée'], 404);
+    public function saveImage(Request $request)
+    {
+        try {
+            // Vérifier si l'image en base64 est fournie
+            $imageData = $request->input('image');
+            if (!$imageData) {
+                return response()->json(['error' => 'Aucune image fournie'], 400);
+            }
+    
+            // Supprimer le préfixe "data:image/png;base64," et décoder l'image
+            $imageData = preg_replace('/^data:image\/\w+;base64,/', '', $imageData);
+            $imageData = base64_decode($imageData);
+    
+            if (!$imageData) {
+                return response()->json(['error' => 'Format d\'image invalide'], 400);
+            }
+    
+            // Initialiser ImageManager avec le driver Imagick
+            $manager = new ImageManager(new Driver());
+    
+            // Lire l'image à partir des données binaires
+            $image = $manager->read($imageData);
+    
+            // Convertir l'image en WebP avec une qualité de 80%
+            $webpImage = $image->toWebp(80); // Encodage WebP
+    
+            // Générer un nom unique pour l'image WebP
+            $imageName = 'image_' . time() . '.webp';
+            $imagePath = 'images/' . $imageName;
+    
+            // Stocker l'image WebP dans 'storage/app/public/images'
+            Storage::disk('public')->put($imagePath, (string) $webpImage);
+    
+            // Sauvegarder le chemin dans la base de données
+            $imageModel = new ImageModel();
+            $imageModel->path = 'storage/' . $imagePath; // Chemin accessible publiquement
+            $imageModel->save();
+    
+            // Retourner la réponse avec l'URL publique de l'image
+            return response()->json(['success' => true, 'path' => asset('storage/' . $imagePath)]);
+        } catch (\Exception $e) {
+            Log::error('Erreur lors de l\'enregistrement de l\'image: ' . $e->getMessage());
+            return response()->json(['error' => 'Erreur lors de l\'enregistrement de l\'image. Vérifiez les logs.'], 500);
+        }
     }
+    
 
-    // Vérifier si l'image d'en-tête existe
-    if (!File::exists($headerPath)) {
-        return response()->json(['error' => 'Image d\'en-tête non trouvée'], 404);
-    }
-
-    // Vérifier si l'image de pied de page existe
-    if (!File::exists($footerPath)) {
-        return response()->json(['error' => 'Image de pied de page non trouvée'], 404);
-    }
-
-    // Création du gestionnaire d'image avec la bibliothèque GD
-    $manager = new ImageManager(new Driver());
-
-    try {
-        // Charger l'image de fond
-        $background = $manager->read($backgroundPath); // Utilisez 'read' au lieu de 'make'
-
-        // Assurez-vous que l'image de fond est de taille suffisante
-        $background->resize(1200, 800);  // Exemple pour redimensionner l'image à une taille spécifique
-
-        // Ajouter l'image d'en-tête au-dessus de l'image de fond
-        $header = $manager->read($headerPath); // Utilisez 'read' pour l'image d'en-tête
-        $headerWidth = $header->width(); // Utiliser width() pour obtenir la largeur de l'image
-        $background->place($header, 'top', (1200 - $headerWidth) / 2, 0);  // Centrer horizontalement l'en-tête
-
-        // Ajouter un texte en overlay sur l'image de fond
-        $background->text('Open Bamakangoa', 400, 600, function ($font) {
-            $font->file(public_path('fonts/Birthstone-Regular.ttf'));
-            $font->size(40);
-            $font->color('#FFFFFF');
-            $font->align('center');
-            $font->valign('middle');
-        });
-
-        $background->text('J\'y serai', 400, 700, function ($font) {
-            $font->file(public_path('fonts/Birthstone-Regular.ttf'));
-            $font->size(30);
-            $font->color('#000000');
-            $font->align('center');
-            $font->valign('middle');
-        });
-
-        // Ajouter l'image de pied de page en bas
-        $footer = $manager->read($footerPath); // Utilisez 'read' pour l'image de pied de page
-        $footerWidth = $footer->width(); // Utiliser width() pour obtenir la largeur de l'image
-        $background->place($footer, 'bottom', (1200 - $footerWidth) / 2, 800 - $footer->height());  // Centrer horizontalement le pied de page
-
-        // Enregistrer l'image générée
-        $path = 'images/generated_' . time() . '.png';
-        $background->save(public_path($path));
-
-        return response()->json(['image_url' => asset($path)]);
-
-    } catch (\Exception $e) {
-        // Si une erreur survient lors du traitement de l'image
-        return response()->json(['error' => 'Impossible de traiter l\'image : ' . $e->getMessage()], 500);
-    }
-}
+    
 
 
+    
+    
+    // public function upload(Request $request)
+    // {
+    //     $request->validate([
+    //         'image' => 'required|image|mimes:jpeg,png,jpg,gif,svg|max:2048',
+    //     ]);
+
+    //     if ($request->hasFile('image')) {
+    //         $image = $request->file('image');
+    //         $imageName = time() . '.' . $image->getClientOriginalExtension();
+    //         $image->move(public_path('uploads'), $imageName);
+
+    //         return response()->json(['image_url' => asset('uploads/' . $imageName)]);
+    //     }
+
+    //     return response()->json(['error' => 'Image upload failed'], 400);
+    // }
 }

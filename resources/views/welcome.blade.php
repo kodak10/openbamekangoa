@@ -11,7 +11,13 @@
     </div>
 </div>
 
+
+
 <div class="container mt-5">
+
+    <div id="notification" style="display: none; position: fixed; top: 20px; left: 20px; padding: 15px; background-color: #28a745; color: white; border-radius: 5px; z-index: 10000;">
+    Image enregistrée avec succès !
+</div>
     <div class="row">
         <div class="col-md-8">
             <div class="card w-100" id="capture-area"> 
@@ -156,12 +162,20 @@
             document.getElementById('loading-spinner').style.display = 'none';
 
             if (data.success) {
-                alert('Image enregistrée avec succès !');
+                // Afficher la notification de succès
+                const notification = document.getElementById('notification');
+                notification.style.display = 'block';
 
+                // Masquer la notification après 10 secondes
+                setTimeout(() => {
+                    notification.style.display = 'none';
+                }, 10000);
+
+                // Télécharger l'image
                 const link = document.createElement('a');
-                link.href = data.path;  // Path returned by server
-                link.download = 'image.png'; // File name for download
-                link.click();  // Trigger the download
+                link.href = data.path;  // Chemin retourné par le serveur
+                link.download = 'image.png'; // Nom du fichier pour le téléchargement
+                link.click();  // Déclencher le téléchargement
             } else {
                 alert('Une erreur est survenue lors de l\'enregistrement de l\'image.');
             }

@@ -38,21 +38,32 @@ class ImageController extends Controller
                 return response()->json(['error' => 'Format d\'image invalide'], 400);
             }
     
+            // Créer une image à partir des données décodées
+            $image = imagecreatefromstring($imageData);
+            if (!$image) {
+                return response()->json(['error' => 'Impossible de créer l\'image'], 400);
+            }
+    
             // Générer un nom unique pour l'image
-            $imageName = 'image_' . time() . '.png';
+            $imageName = 'image_' . time() . '.webp';
     
             // Définir le chemin de stockage
             $imagePath = 'images/' . $imageName;
     
-            // Stocker l'image dans 'storage/app/public/images'
-            Storage::disk('public')->put($imagePath, $imageData);
+            // Convertir et enregistrer l'image en WebP
+            $success = imagewebp($image, storage_path('app/public/' . $imagePath));
+    
+            // Libérer la mémoire
+            imagedestroy($image);
+    
+            if (!$success) {
+                return response()->json(['error' => 'Erreur lors de la conversion de l\'image en WebP'], 500);
+            }
     
             // Sauvegarder le chemin dans la base de données
             $imageModel = new ImageModel();
             $imageModel->path = 'storage/' . $imagePath; // Chemin accessible publiquement
             $imageModel->save();
-
-            // Télécharger automatiquement l'image après l'enregistrement
     
             // Retourner la réponse avec l'URL publique de l'image
             return response()->json(['success' => true, 'path' => asset('storage/' . $imagePath)]);
@@ -60,25 +71,6 @@ class ImageController extends Controller
             return response()->json(['error' => 'Erreur lors de l\'enregistrement de l\'image: ' . $e->getMessage()], 500);
         }
     }
+       
     
-
-
-    
-    
-    // public function upload(Request $request)
-    // {
-    //     $request->validate([
-    //         'image' => 'required|image|mimes:jpeg,png,jpg,gif,svg|max:2048',
-    //     ]);
-
-    //     if ($request->hasFile('image')) {
-    //         $image = $request->file('image');
-    //         $imageName = time() . '.' . $image->getClientOriginalExtension();
-    //         $image->move(public_path('uploads'), $imageName);
-
-    //         return response()->json(['image_url' => asset('uploads/' . $imageName)]);
-    //     }
-
-    //     return response()->json(['error' => 'Image upload failed'], 400);
-    // }
 }
