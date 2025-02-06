@@ -25,7 +25,7 @@
   <nav class="navbar navbar-expand-lg navbar-dark" style="background-color: #343a40;">
     <div class="container-fluid">
         <!-- Logo et nom de la marque -->
-        <a class="navbar-brand d-flex align-items-center" href="#">
+        <a class="navbar-brand d-flex align-items-center" href="/">
             <img src="{{ asset('logo.png') }}" alt="Logo" style="height: 80px; margin-right: 10px;">
             OPEN BAMEKANGOA
         </a>
